@@ -1,6 +1,5 @@
 from functools import partial
 from charmhelpers.core import hookenv
-from charmhelpers.core import host
 from charmhelpers.core.services.base import ServiceManager
 from charmhelpers.core.services import helpers
 from charmhelpers.contrib.openstack.templating import os_template_dirs

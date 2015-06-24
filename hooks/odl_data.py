@@ -1,6 +1,5 @@
 import json
 from charmhelpers.core.services import helpers
-from charmhelpers.contrib.openstack import context
 from charmhelpers.core.hookenv import(
     config,
 )
@@ -99,7 +98,6 @@ class ODLControllerRelation(helpers.RelationContext):
 class ConfigTranslation(dict):
     def __init__(self):
         self['use_syslog'] = config('use-syslog')
-        self['vlan_ranges'] = config('vlan-ranges')
         self['vlan_ranges'] = config('vlan-ranges')
         self['overlay_network_type'] = self.get_overlay_network_type()
 
