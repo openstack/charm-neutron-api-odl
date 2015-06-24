@@ -1,0 +1,17 @@
+Todo:
+* Figure out how to do new world v oldworld rendering
+* Just about everything.
+* I: No icon.svg file.
+* W: no copyright file
+* W: no README file
+* I: missing recommended hook start
+* Confd ssh keys installed from /cisco/etc/confd/ssh
+* Interfaces allocated to VPP should be configured within the /cisco/etc/qn.conf file via a Cisco provided script
+
+Done-ish
+* QEMU 2.2 and libvirt 1.2.8 or greater.
+
+Done
+* 1GB of hugepages allocated upon system boot. Adjusting vm.nr_hugepages within the /etc/sysctl.conf. 
+* vm.max_map_count should be adjusted in line with hugepages (The default of 65536 equals 1GB of hugepages)
+* For debugging purposes, apport needs to be uninstalled and corekeeper installed in its place on compute hosts.

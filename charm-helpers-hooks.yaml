@@ -1,0 +1,11 @@
+branch: lp:~gnuoy/charm-helpers/cisco-vpp/
+destination: hooks/charmhelpers
+include:
+    - core
+    - fetch
+    - contrib.openstack|inc=*
+    - contrib.hahelpers 
+    - contrib.network.ip 
+    - contrib.storage.linux
+    - contrib.python.packages
+    - payload.archive

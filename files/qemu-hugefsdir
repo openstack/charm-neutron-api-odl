@@ -1,0 +1,14 @@
+#! /bin/sh
+#
+### BEGIN INIT INFO
+# Required-Start:    $local_fs
+# Required-Stop:     $local_fs
+# Provides:          qemu-hugefsdir
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 6
+# Short-Description: Make sure qemu gets a temp hugetblfs dir
+# Description:       Make sure qemu gets a temp hugetblfs dir
+### END INIT INFO
+
+mkdir -p /mnt/huge/libvirt/qemu || true
+chown libvirt-qemu:libvirtd /mnt/huge/libvirt/qemu
