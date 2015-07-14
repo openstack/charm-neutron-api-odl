@@ -70,6 +70,8 @@ class ODLControllerRelation(helpers.RelationContext):
         # first nodes private-address
         self['odl_ip'] = first_contoller.get('private-address')
         self['odl_port'] = first_contoller.get('port')
+        # ODL passing wrong port atm
+        self['odl_port'] = '8181'
         self['odl_username'] = first_contoller.get('username')
         self['odl_password'] = first_contoller.get('password')
 
