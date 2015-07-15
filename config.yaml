@@ -29,3 +29,7 @@ options:
         vxlan
       .
       Multiple types can be provided - field is space delimited.
+  security-groups:
+    default: false
+    type: boolean
+    description: Enable OpenDayLight managed security groups.
