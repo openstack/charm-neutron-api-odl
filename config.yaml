@@ -1,18 +1,4 @@
 options:
-  use-syslog:
-    type: boolean
-    default: False
-    description: |
-      By default, all services will log into their corresponding log files.
-      Setting this to True will force all services to log to the syslog.
-  debug:
-    default: False
-    type: boolean
-    description: Enable debug logging
-  verbose:
-    default: False
-    type: boolean
-    description: Enable verbose logging
   vlan-ranges:
     type: string
     default: "physnet1:1000:2000"
