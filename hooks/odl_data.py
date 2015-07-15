@@ -73,21 +73,6 @@ class ODLControllerRelation(helpers.RelationContext):
         self['odl_username'] = first_contoller.get('username')
         self['odl_password'] = first_contoller.get('password')
 
-    def provide_data(self):
-        odl_cmds = {
-            'feature:install': [
-                'cosc-cvpn-ovs-rest',
-                'odl-netconf-connector-all'
-            ],
-            'log:set': {
-                'TRACE': ['cosc-cvpn-ovs-rest', 'odl-netconf-connector-all'],
-            }
-        }
-        relation_info = {
-            'odl-cmds': json.dump(odl_cmds)
-        }
-        return relation_info
-
     def is_ready(self):
         if 'password' in self.get_first_data():
             return True
