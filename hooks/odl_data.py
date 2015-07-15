@@ -85,6 +85,7 @@ class ConfigTranslation(dict):
         self['use_syslog'] = config('use-syslog')
         self['vlan_ranges'] = config('vlan-ranges')
         self['overlay_network_type'] = self.get_overlay_network_type()
+        self['security_groups'] = config('security-groups')
 
     def get_overlay_network_type(self):
         overlay_networks = config('overlay-network-type').split()
