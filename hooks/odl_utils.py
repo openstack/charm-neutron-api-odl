@@ -31,7 +31,7 @@ def install_packages(servicename):
         # NOTE(jamespage): Temporary until in the kilo cloud archive
         add_source('ppa:james-page/kilo-backports')
         apt_update()
-        pkgs += 'python-networking-odl'
+        pkgs.extend(['python-networking-odl'])
     apt_install(pkgs)
 
 
