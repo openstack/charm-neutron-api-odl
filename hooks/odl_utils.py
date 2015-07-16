@@ -1,12 +1,5 @@
-from charmhelpers.core.hookenv import(
-    INFO,
-    config,
-    log,
-)
 from charmhelpers.fetch import (
     apt_install,
-    apt_update,
-    add_source,
     filter_installed_packages,
 )
 
@@ -28,9 +21,6 @@ PACKAGES = ['neutron-common', 'neutron-plugin-ml2']
 def install_packages(servicename):
     pkgs = filter_installed_packages(determine_packages())
     if os_release('neutron-common') >= 'kilo':
-        # NOTE(jamespage): Temporary until in the kilo cloud archive
-        add_source('ppa:james-page/kilo-backports')
-        apt_update()
         pkgs.extend(['python-networking-odl'])
     apt_install(pkgs)
 
