@@ -1,12 +1,9 @@
-from charmhelpers.core.hookenv import(
-    INFO,
-    config,
-    log,
-)
 from charmhelpers.fetch import (
     apt_install,
     filter_installed_packages,
 )
+
+from charmhelpers.contrib.openstack.utils import os_release
 
 NEUTRON_CONF_DIR = "/etc/neutron"
 NEUTRON_CONF = '%s/neutron.conf' % NEUTRON_CONF_DIR
@@ -23,6 +20,8 @@ PACKAGES = ['neutron-common', 'neutron-plugin-ml2']
 
 def install_packages(servicename):
     pkgs = filter_installed_packages(determine_packages())
+    if os_release('neutron-common') >= 'kilo':
+        pkgs.extend(['python-networking-odl'])
     apt_install(pkgs)
 
 
