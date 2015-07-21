@@ -70,25 +70,8 @@ class ODLControllerRelation(helpers.RelationContext):
         # first nodes private-address
         self['odl_ip'] = first_contoller.get('private-address')
         self['odl_port'] = first_contoller.get('port')
-        # ODL passing wrong port atm
-        self['odl_port'] = '8181'
         self['odl_username'] = first_contoller.get('username')
         self['odl_password'] = first_contoller.get('password')
-
-    def provide_data(self):
-        odl_cmds = {
-            'feature:install': [
-                'cosc-cvpn-ovs-rest',
-                'odl-netconf-connector-all'
-            ],
-            'log:set': {
-                'TRACE': ['cosc-cvpn-ovs-rest', 'odl-netconf-connector-all'],
-            }
-        }
-        relation_info = {
-            'odl-cmds': json.dump(odl_cmds)
-        }
-        return relation_info
 
     def is_ready(self):
         if 'password' in self.get_first_data():
@@ -99,9 +82,9 @@ class ODLControllerRelation(helpers.RelationContext):
 
 class ConfigTranslation(dict):
     def __init__(self):
-        self['use_syslog'] = config('use-syslog')
         self['vlan_ranges'] = config('vlan-ranges')
         self['overlay_network_type'] = self.get_overlay_network_type()
+        self['security_groups'] = config('security-groups')
 
     def get_overlay_network_type(self):
         overlay_networks = config('overlay-network-type').split()
