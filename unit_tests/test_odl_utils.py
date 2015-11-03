@@ -26,7 +26,6 @@ class VPPUtilsTest(CharmTestCase):
                                              'neutron-plugin-ml2'],
                                             fatal=True)
 
-
     def test_install_packages_kilo(self):
         def _filter(pkg_list):
             return pkg_list
