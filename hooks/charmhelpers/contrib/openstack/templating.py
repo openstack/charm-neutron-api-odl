@@ -18,7 +18,7 @@ import os
 
 import six
 
-from charmhelpers.fetch import apt_install
+from charmhelpers.fetch import apt_install, apt_update
 from charmhelpers.core.hookenv import (
     log,
     ERROR,
@@ -29,37 +29,13 @@ from charmhelpers.contrib.openstack.utils import OPENSTACK_CODENAMES
 try:
     from jinja2 import FileSystemLoader, ChoiceLoader, Environment, exceptions
 except ImportError:
-    # python-jinja2 may not be installed yet, or we're running unittests.
-    FileSystemLoader = ChoiceLoader = Environment = exceptions = None
+    apt_update(fatal=True)
+    apt_install('python-jinja2', fatal=True)
+    from jinja2 import FileSystemLoader, ChoiceLoader, Environment, exceptions
 
 
 class OSConfigException(Exception):
     pass
-
-
-def os_template_dirs(templates_dir, os_release):
-    tmpl_dirs = [(rel, os.path.join(templates_dir, rel))
-                 for rel in six.itervalues(OPENSTACK_CODENAMES)]
-
-    if not os.path.isdir(templates_dir):
-        log('Templates directory not found @ %s.' % templates_dir,
-            level=ERROR)
-        raise OSConfigException
-    dirs = [templates_dir]
-    helper_templates = os.path.join(os.path.dirname(__file__), 'templates')
-    if os.path.isdir(helper_templates):
-        dirs.append(helper_templates)
-
-    for rel, tmpl_dir in tmpl_dirs:
-        if os.path.isdir(tmpl_dir):
-            dirs.insert(0, tmpl_dir)
-        if rel == os_release:
-            break
-    ch_templates = os.path.dirname(__file__) + '/charmhelpers/contrib/openstack/templates'
-    dirs.append(ch_templates)
-    log('Template search path: %s' %
-        ' '.join(dirs), level=INFO)
-    return dirs
 
 
 def get_loader(templates_dir, os_release):
@@ -137,7 +113,7 @@ class OSConfigTemplate(object):
 
     def complete_contexts(self):
         '''
-        Return a list of interfaces that have atisfied contexts.
+        Return a list of interfaces that have satisfied contexts.
         '''
         if self._complete_contexts:
             return self._complete_contexts
@@ -318,3 +294,30 @@ class OSConfigRenderer(object):
         [interfaces.extend(i.complete_contexts())
          for i in six.itervalues(self.templates)]
         return interfaces
+
+    def get_incomplete_context_data(self, interfaces):
+        '''
+        Return dictionary of relation status of interfaces and any missing
+        required context data. Example:
+            {'amqp': {'missing_data': ['rabbitmq_password'], 'related': True},
+             'zeromq-configuration': {'related': False}}
+        '''
+        incomplete_context_data = {}
+
+        for i in six.itervalues(self.templates):
+            for context in i.contexts:
+                for interface in interfaces:
+                    related = False
+                    if interface in context.interfaces:
+                        related = context.get_related()
+                        missing_data = context.missing_data
+                        if missing_data:
+                            incomplete_context_data[interface] = {'missing_data': missing_data}
+                        if related:
+                            if incomplete_context_data.get(interface):
+                                incomplete_context_data[interface].update({'related': True})
+                            else:
+                                incomplete_context_data[interface] = {'related': True}
+                        else:
+                            incomplete_context_data[interface] = {'related': False}
+        return incomplete_context_data

@@ -21,8 +21,7 @@ from charmhelpers.core import hookenv
 
 
 def render(source, target, context, owner='root', group='root',
-           perms=0o444, templates_dir=None, encoding='UTF-8',
-           template_searchpath=None):
+           perms=0o444, templates_dir=None, encoding='UTF-8', template_loader=None):
     """
     Render a template.
 
@@ -41,7 +40,7 @@ def render(source, target, context, owner='root', group='root',
     this will attempt to use charmhelpers.fetch.apt_install to install it.
     """
     try:
-        from jinja2 import ChoiceLoader, FileSystemLoader, Environment, exceptions
+        from jinja2 import FileSystemLoader, Environment, exceptions
     except ImportError:
         try:
             from charmhelpers.fetch import apt_install
@@ -51,25 +50,26 @@ def render(source, target, context, owner='root', group='root',
                         level=hookenv.ERROR)
             raise
         apt_install('python-jinja2', fatal=True)
-        from jinja2 import ChoiceLoader, FileSystemLoader, Environment, exceptions
+        from jinja2 import FileSystemLoader, Environment, exceptions
 
-    if template_searchpath:
-        fs_loaders = []
-        for tmpl_dir in template_searchpath:
-            fs_loaders.append(FileSystemLoader(tmpl_dir))
-        loader = ChoiceLoader(fs_loaders) 
+    if template_loader:
+        template_env = Environment(loader=template_loader)
     else:
         if templates_dir is None:
             templates_dir = os.path.join(hookenv.charm_dir(), 'templates')
-        loader = Environment(loader=FileSystemLoader(templates_dir))
+        template_env = Environment(loader=FileSystemLoader(templates_dir))
     try:
         source = source
-        template = loader.get_template(source)
+        template = template_env.get_template(source)
     except exceptions.TemplateNotFound as e:
         hookenv.log('Could not load template %s from %s.' %
                     (source, templates_dir),
                     level=hookenv.ERROR)
         raise e
     content = template.render(context)
-    host.mkdir(os.path.dirname(target), owner, group, perms=0o755)
+    target_dir = os.path.dirname(target)
+    if not os.path.exists(target_dir):
+        # This is a terrible default directory permission, as the file
+        # or its siblings will often contain secrets.
+        host.mkdir(os.path.dirname(target), owner, group, perms=0o755)
     host.write_file(target, content.encode(encoding), owner, group, perms)
