@@ -19,10 +19,11 @@ PACKAGES = ['neutron-common', 'neutron-plugin-ml2']
 
 
 def install_packages(servicename):
-    pkgs = filter_installed_packages(determine_packages())
+    pkgs = determine_packages()
     if os_release('neutron-common') >= 'kilo':
         pkgs.extend(['python-networking-odl'])
-    apt_install(pkgs)
+    pkgs = filter_installed_packages(pkgs)
+    apt_install(pkgs, fatal=True)
 
 
 def determine_packages(node_type=None):
