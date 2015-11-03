@@ -2,7 +2,7 @@ from functools import partial
 from charmhelpers.core import hookenv
 from charmhelpers.core.services.base import ServiceManager
 from charmhelpers.core.services import helpers
-from charmhelpers.contrib.openstack.templating import os_template_dirs
+from charmhelpers.contrib.openstack.templating import get_loader
 from charmhelpers.contrib.openstack.utils import os_release, remote_restart
 
 import odl_utils
@@ -33,8 +33,7 @@ def manage():
             'data_ready': [
                 helpers.render_template(
                     source='ml2_conf.ini',
-                    template_searchpath=os_template_dirs('templates/',
-                                                         release),
+                    template_loader=get_loader('templates/', release),
                     target='/etc/neutron/plugins/ml2/ml2_conf.ini',
                     on_change_action=(partial(remote_restart,
                                               'neutron-plugin-api-subordinate',
