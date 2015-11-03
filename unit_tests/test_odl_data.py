@@ -132,24 +132,24 @@ class ConfigTranslationTest(CharmTestCase):
 
     def test_config_default(self):
         ctxt = odl_data.ConfigTranslation()
-        self.assertEqual(ctxt, {'use_syslog': False,
-                                'vlan_ranges': 'physnet1:1000:2000',
-                                'overlay_network_type': 'gre'})
+        self.assertEqual(ctxt, {'vlan_ranges': 'physnet1:1000:2000',
+                                'overlay_network_type': 'gre',
+                                'security_groups': False})
 
-        self.test_config.set('use-syslog', True)
+        self.test_config.set('security-groups', True)
         ctxt = odl_data.ConfigTranslation()
-        self.assertEqual(ctxt, {'use_syslog': True,
-                                'vlan_ranges': 'physnet1:1000:2000',
-                                'overlay_network_type': 'gre'})
+        self.assertEqual(ctxt, {'vlan_ranges': 'physnet1:1000:2000',
+                                'overlay_network_type': 'gre',
+                                'security_groups': True})
 
         self.test_config.set('vlan-ranges', 'physnet1:1000:3000')
         ctxt = odl_data.ConfigTranslation()
-        self.assertEqual(ctxt, {'use_syslog': True,
-                                'vlan_ranges': 'physnet1:1000:3000',
-                                'overlay_network_type': 'gre'})
+        self.assertEqual(ctxt, {'vlan_ranges': 'physnet1:1000:3000',
+                                'overlay_network_type': 'gre',
+                                'security_groups': True})
 
         self.test_config.set('overlay-network-type', 'vxlan')
         ctxt = odl_data.ConfigTranslation()
-        self.assertEqual(ctxt, {'use_syslog': True,
-                                'vlan_ranges': 'physnet1:1000:3000',
-                                'overlay_network_type': 'vxlan'})
+        self.assertEqual(ctxt, {'vlan_ranges': 'physnet1:1000:3000',
+                                'overlay_network_type': 'vxlan',
+                                'security_groups': True})
