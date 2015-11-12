@@ -64,6 +64,7 @@ class AmuletDeployment(object):
 
             if 'units' not in svc:
                 svc['units'] = 1
+
             self.d.add(svc['name'], charm=branch_location, units=svc['units'],
                        constraints=svc.get('constraints'))
 
