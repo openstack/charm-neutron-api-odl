@@ -1,9 +1,19 @@
 name: neutron-api-odl
 subordinate: true
-maintainer: Liam Young <liam.young@canonical.com>
-summary: "Configure ODL api server"
+summary: OpenStack Networking - OpenDayLight mechanism driver
+maintainer: OpenStack Charmers <openstack-charmers@lists.ubuntu.com>
 description: |
-    Configure ODL api server
+  Neutron is a virtual network service for OpenStack, and a part of
+  Netstack. Just like OpenStack Nova provides an API to dynamically
+  request and configure virtual servers, Neutron provides an API to
+  dynamically request and configure virtual networks. These networks
+  connect "interfaces" from other OpenStack services (e.g., virtual NICs
+  from Nova VMs). The Neutron API supports extensions to provide
+  advanced network capabilities (e.g., QoS, ACLs, network monitoring,
+  etc.)
+  .
+  This charm configures the neutron-api service with the OpenDayLight
+  SDN solution.
 tags:
   - openstack
 provides:
