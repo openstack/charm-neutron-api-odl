@@ -25,6 +25,7 @@ import sys
 import re
 
 import six
+import tempfile
 import traceback
 import uuid
 import yaml
@@ -41,6 +42,7 @@ from charmhelpers.core.hookenv import (
     config,
     log as juju_log,
     charm_dir,
+    DEBUG,
     INFO,
     related_units,
     relation_ids,
@@ -86,6 +88,7 @@ UBUNTU_OPENSTACK_RELEASE = OrderedDict([
     ('utopic', 'juno'),
     ('vivid', 'kilo'),
     ('wily', 'liberty'),
+    ('xenial', 'mitaka'),
 ])
 
 
@@ -99,61 +102,70 @@ OPENSTACK_CODENAMES = OrderedDict([
     ('2014.2', 'juno'),
     ('2015.1', 'kilo'),
     ('2015.2', 'liberty'),
+    ('2016.1', 'mitaka'),
 ])
 
-# The ugly duckling
+# The ugly duckling - must list releases oldest to newest
 SWIFT_CODENAMES = OrderedDict([
-    ('1.4.3', 'diablo'),
-    ('1.4.8', 'essex'),
-    ('1.7.4', 'folsom'),
-    ('1.8.0', 'grizzly'),
-    ('1.7.7', 'grizzly'),
-    ('1.7.6', 'grizzly'),
-    ('1.10.0', 'havana'),
-    ('1.9.1', 'havana'),
-    ('1.9.0', 'havana'),
-    ('1.13.1', 'icehouse'),
-    ('1.13.0', 'icehouse'),
-    ('1.12.0', 'icehouse'),
-    ('1.11.0', 'icehouse'),
-    ('2.0.0', 'juno'),
-    ('2.1.0', 'juno'),
-    ('2.2.0', 'juno'),
-    ('2.2.1', 'kilo'),
-    ('2.2.2', 'kilo'),
-    ('2.3.0', 'liberty'),
-    ('2.4.0', 'liberty'),
-    ('2.5.0', 'liberty'),
+    ('diablo',
+        ['1.4.3']),
+    ('essex',
+        ['1.4.8']),
+    ('folsom',
+        ['1.7.4']),
+    ('grizzly',
+        ['1.7.6', '1.7.7', '1.8.0']),
+    ('havana',
+        ['1.9.0', '1.9.1', '1.10.0']),
+    ('icehouse',
+        ['1.11.0', '1.12.0', '1.13.0', '1.13.1']),
+    ('juno',
+        ['2.0.0', '2.1.0', '2.2.0']),
+    ('kilo',
+        ['2.2.1', '2.2.2']),
+    ('liberty',
+        ['2.3.0', '2.4.0', '2.5.0']),
+    ('mitaka',
+        ['2.5.0']),
 ])
 
 # >= Liberty version->codename mapping
 PACKAGE_CODENAMES = {
     'nova-common': OrderedDict([
-        ('12.0.0', 'liberty'),
+        ('12.0', 'liberty'),
+        ('13.0', 'mitaka'),
     ]),
     'neutron-common': OrderedDict([
-        ('7.0.0', 'liberty'),
+        ('7.0', 'liberty'),
+        ('8.0', 'mitaka'),
     ]),
     'cinder-common': OrderedDict([
-        ('7.0.0', 'liberty'),
+        ('7.0', 'liberty'),
+        ('8.0', 'mitaka'),
     ]),
     'keystone': OrderedDict([
-        ('8.0.0', 'liberty'),
+        ('8.0', 'liberty'),
+        ('9.0', 'mitaka'),
     ]),
     'horizon-common': OrderedDict([
-        ('8.0.0', 'liberty'),
+        ('8.0', 'liberty'),
+        ('9.0', 'mitaka'),
     ]),
     'ceilometer-common': OrderedDict([
-        ('5.0.0', 'liberty'),
+        ('5.0', 'liberty'),
+        ('6.0', 'mitaka'),
     ]),
     'heat-common': OrderedDict([
-        ('5.0.0', 'liberty'),
+        ('5.0', 'liberty'),
+        ('6.0', 'mitaka'),
     ]),
     'glance-common': OrderedDict([
-        ('11.0.0', 'liberty'),
+        ('11.0', 'liberty'),
+        ('12.0', 'mitaka'),
     ]),
     'openstack-dashboard': OrderedDict([
-        ('8.0.0', 'liberty'),
+        ('8.0', 'liberty'),
+        ('9.0', 'mitaka'),
     ]),
 }
 
@@ -216,6 +228,33 @@ def get_os_version_codename(codename, version_map=OPENSTACK_CODENAMES):
     error_out(e)
 
 
+def get_os_version_codename_swift(codename):
+    '''Determine OpenStack version number of swift from codename.'''
+    for k, v in six.iteritems(SWIFT_CODENAMES):
+        if k == codename:
+            return v[-1]
+    e = 'Could not derive swift version for '\
+        'codename: %s' % codename
+    error_out(e)
+
+
+def get_swift_codename(version):
+    '''Determine OpenStack codename that corresponds to swift version.'''
+    codenames = [k for k, v in six.iteritems(SWIFT_CODENAMES) if version in v]
+    if len(codenames) > 1:
+        # If more than one release codename contains this version we determine
+        # the actual codename based on the highest available install source.
+        for codename in reversed(codenames):
+            releases = UBUNTU_OPENSTACK_RELEASE
+            release = [k for k, v in six.iteritems(releases) if codename in v]
+            ret = subprocess.check_output(['apt-cache', 'policy', 'swift'])
+            if codename in ret or release[0] in ret:
+                return codename
+    elif len(codenames) == 1:
+        return codenames[0]
+    return None
+
+
 def get_os_codename_package(package, fatal=True):
     '''Derive OpenStack release codename from an installed package.'''
     import apt_pkg as apt
@@ -240,7 +279,14 @@ def get_os_codename_package(package, fatal=True):
         error_out(e)
 
     vers = apt.upstream_version(pkg.current_ver.ver_str)
-    match = re.match('^(\d+)\.(\d+)\.(\d+)', vers)
+    if 'swift' in pkg.name:
+        # Fully x.y.z match for swift versions
+        match = re.match('^(\d+)\.(\d+)\.(\d+)', vers)
+    else:
+        # x.y match only for 20XX.X
+        # and ignore patch level for other packages
+        match = re.match('^(\d+)\.(\d+)', vers)
+
     if match:
         vers = match.group(0)
 
@@ -252,13 +298,8 @@ def get_os_codename_package(package, fatal=True):
         # < Liberty co-ordinated project versions
         try:
             if 'swift' in pkg.name:
-                swift_vers = vers[:5]
-                if swift_vers not in SWIFT_CODENAMES:
-                    # Deal with 1.10.0 upward
-                    swift_vers = vers[:6]
-                return SWIFT_CODENAMES[swift_vers]
+                return get_swift_codename(vers)
             else:
-                vers = vers[:6]
                 return OPENSTACK_CODENAMES[vers]
         except KeyError:
             if not fatal:
@@ -276,12 +317,14 @@ def get_os_version_package(pkg, fatal=True):
 
     if 'swift' in pkg:
         vers_map = SWIFT_CODENAMES
+        for cname, version in six.iteritems(vers_map):
+            if cname == codename:
+                return version[-1]
     else:
         vers_map = OPENSTACK_CODENAMES
-
-    for version, cname in six.iteritems(vers_map):
-        if cname == codename:
-            return version
+        for version, cname in six.iteritems(vers_map):
+            if cname == codename:
+                return version
     # e = "Could not determine OpenStack version for package: %s" % pkg
     # error_out(e)
 
@@ -306,12 +349,42 @@ def os_release(package, base='essex'):
 
 
 def import_key(keyid):
-    cmd = "apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 " \
-          "--recv-keys %s" % keyid
-    try:
-        subprocess.check_call(cmd.split(' '))
-    except subprocess.CalledProcessError:
-        error_out("Error importing repo key %s" % keyid)
+    key = keyid.strip()
+    if (key.startswith('-----BEGIN PGP PUBLIC KEY BLOCK-----') and
+            key.endswith('-----END PGP PUBLIC KEY BLOCK-----')):
+        juju_log("PGP key found (looks like ASCII Armor format)", level=DEBUG)
+        juju_log("Importing ASCII Armor PGP key", level=DEBUG)
+        with tempfile.NamedTemporaryFile() as keyfile:
+            with open(keyfile.name, 'w') as fd:
+                fd.write(key)
+                fd.write("\n")
+
+            cmd = ['apt-key', 'add', keyfile.name]
+            try:
+                subprocess.check_call(cmd)
+            except subprocess.CalledProcessError:
+                error_out("Error importing PGP key '%s'" % key)
+    else:
+        juju_log("PGP key found (looks like Radix64 format)", level=DEBUG)
+        juju_log("Importing PGP key from keyserver", level=DEBUG)
+        cmd = ['apt-key', 'adv', '--keyserver',
+               'hkp://keyserver.ubuntu.com:80', '--recv-keys', key]
+        try:
+            subprocess.check_call(cmd)
+        except subprocess.CalledProcessError:
+            error_out("Error importing PGP key '%s'" % key)
+
+
+def get_source_and_pgp_key(input):
+    """Look for a pgp key ID or ascii-armor key in the given input."""
+    index = input.strip()
+    index = input.rfind('|')
+    if index < 0:
+        return input, None
+
+    key = input[index + 1:].strip('|')
+    source = input[:index]
+    return source, key
 
 
 def configure_installation_source(rel):
@@ -323,16 +396,16 @@ def configure_installation_source(rel):
         with open('/etc/apt/sources.list.d/juju_deb.list', 'w') as f:
             f.write(DISTRO_PROPOSED % ubuntu_rel)
     elif rel[:4] == "ppa:":
-        src = rel
+        src, key = get_source_and_pgp_key(rel)
+        if key:
+            import_key(key)
+
         subprocess.check_call(["add-apt-repository", "-y", src])
     elif rel[:3] == "deb":
-        l = len(rel.split('|'))
-        if l == 2:
-            src, key = rel.split('|')
-            juju_log("Importing PPA key from keyserver for %s" % src)
+        src, key = get_source_and_pgp_key(rel)
+        if key:
             import_key(key)
-        elif l == 1:
-            src = rel
+
         with open('/etc/apt/sources.list.d/juju_deb.list', 'w') as f:
             f.write(src)
     elif rel[:6] == 'cloud:':
@@ -377,6 +450,9 @@ def configure_installation_source(rel):
             'liberty': 'trusty-updates/liberty',
             'liberty/updates': 'trusty-updates/liberty',
             'liberty/proposed': 'trusty-proposed/liberty',
+            'mitaka': 'trusty-updates/mitaka',
+            'mitaka/updates': 'trusty-updates/mitaka',
+            'mitaka/proposed': 'trusty-proposed/mitaka',
         }
 
         try:
@@ -444,11 +520,16 @@ def openstack_upgrade_available(package):
     cur_vers = get_os_version_package(package)
     if "swift" in package:
         codename = get_os_codename_install_source(src)
-        available_vers = get_os_version_codename(codename, SWIFT_CODENAMES)
+        avail_vers = get_os_version_codename_swift(codename)
     else:
-        available_vers = get_os_version_install_source(src)
+        avail_vers = get_os_version_install_source(src)
     apt.init()
-    return apt.version_compare(available_vers, cur_vers) == 1
+    if "swift" in package:
+        major_cur_vers = cur_vers.split('.', 1)[0]
+        major_avail_vers = avail_vers.split('.', 1)[0]
+        major_diff = apt.version_compare(major_avail_vers, major_cur_vers)
+        return avail_vers > cur_vers and (major_diff == 1 or major_diff == 0)
+    return apt.version_compare(avail_vers, cur_vers) == 1
 
 
 def ensure_block_device(block_device):
@@ -577,7 +658,7 @@ def _git_yaml_load(projects_yaml):
     return yaml.load(projects_yaml)
 
 
-def git_clone_and_install(projects_yaml, core_project, depth=1):
+def git_clone_and_install(projects_yaml, core_project):
     """
     Clone/install all specified OpenStack repositories.
 
@@ -627,6 +708,9 @@ def git_clone_and_install(projects_yaml, core_project, depth=1):
     for p in projects['repositories']:
         repo = p['repository']
         branch = p['branch']
+        depth = '1'
+        if 'depth' in p.keys():
+            depth = p['depth']
         if p['name'] == 'requirements':
             repo_dir = _git_clone_and_install_single(repo, branch, depth,
                                                      parent_dir, http_proxy,
@@ -671,19 +755,13 @@ def _git_clone_and_install_single(repo, branch, depth, parent_dir, http_proxy,
     """
     Clone and install a single git repository.
     """
-    dest_dir = os.path.join(parent_dir, os.path.basename(repo))
-
     if not os.path.exists(parent_dir):
         juju_log('Directory already exists at {}. '
                  'No need to create directory.'.format(parent_dir))
         os.mkdir(parent_dir)
 
-    if not os.path.exists(dest_dir):
-        juju_log('Cloning git repo: {}, branch: {}'.format(repo, branch))
-        repo_dir = install_remote(repo, dest=parent_dir, branch=branch,
-                                  depth=depth)
-    else:
-        repo_dir = dest_dir
+    juju_log('Cloning git repo: {}, branch: {}'.format(repo, branch))
+    repo_dir = install_remote(repo, dest=parent_dir, branch=branch, depth=depth)
 
     venv = os.path.join(parent_dir, 'venv')
 
