@@ -2,3 +2,4 @@ payload/*
 .tox
 bin
 .testrepository
+*.sw[nop]
