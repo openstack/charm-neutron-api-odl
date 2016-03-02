@@ -3,3 +3,4 @@ payload/*
 bin
 .testrepository
 *.sw[nop]
+*.pyc
