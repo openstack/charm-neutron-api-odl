@@ -1,0 +1,8 @@
+#!/usr/bin/python
+"""Amulet tests on a basic openvswitch ODL deployment on wily-liberty."""
+
+from basic_deployment import NeutronAPIODLBasicDeployment
+
+if __name__ == '__main__':
+    deployment = NeutronAPIODLBasicDeployment(series='wily')
+    deployment.run_tests()

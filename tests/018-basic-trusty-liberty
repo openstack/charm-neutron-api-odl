@@ -1,0 +1,10 @@
+#!/usr/bin/python
+"""Amulet tests on a basic openvswitch ODL deployment on trusty-liberty."""
+
+from basic_deployment import NeutronAPIODLBasicDeployment
+
+if __name__ == '__main__':
+    deployment = NeutronAPIODLBasicDeployment(series='trusty',
+                                              openstack='cloud:trusty-liberty',
+                                              source='cloud:trusty-updates/liberty')
+    deployment.run_tests()

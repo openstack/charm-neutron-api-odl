@@ -1,0 +1,9 @@
+#!/usr/bin/python
+"""Amulet tests on a basic openvswitch ODL deployment on xenial-mitaka."""
+
+from basic_deployment import NeutronAPIODLBasicDeployment
+
+if __name__ == '__main__':
+    deployment = NeutronAPIODLBasicDeployment(series='xenial',
+                                              odl_version='beryllium')
+    deployment.run_tests()
