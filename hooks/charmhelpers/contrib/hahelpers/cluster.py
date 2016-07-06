@@ -1,18 +1,16 @@
 # Copyright 2014-2015 Canonical Limited.
 #
-# This file is part of charm-helpers.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# charm-helpers is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3 as
-# published by the Free Software Foundation.
+#  http://www.apache.org/licenses/LICENSE-2.0
 #
-# charm-helpers is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with charm-helpers.  If not, see <http://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 #
 # Copyright 2012 Canonical Ltd.
@@ -41,10 +39,11 @@ from charmhelpers.core.hookenv import (
     relation_get,
     config as config_get,
     INFO,
-    ERROR,
+    DEBUG,
     WARNING,
     unit_get,
-    is_leader as juju_is_leader
+    is_leader as juju_is_leader,
+    status_set,
 )
 from charmhelpers.core.decorators import (
     retry_on_exception,
@@ -57,6 +56,10 @@ DC_RESOURCE_NAME = 'DC'
 
 
 class HAIncompleteConfig(Exception):
+    pass
+
+
+class HAIncorrectConfig(Exception):
     pass
 
 
@@ -274,25 +277,69 @@ def get_hacluster_config(exclude_keys=None):
     Obtains all relevant configuration from charm configuration required
     for initiating a relation to hacluster:
 
-        ha-bindiface, ha-mcastport, vip
+        ha-bindiface, ha-mcastport, vip, os-internal-hostname,
+        os-admin-hostname, os-public-hostname, os-access-hostname
 
     param: exclude_keys: list of setting key(s) to be excluded.
     returns: dict: A dict containing settings keyed by setting name.
-    raises: HAIncompleteConfig if settings are missing.
+    raises: HAIncompleteConfig if settings are missing or incorrect.
     '''
-    settings = ['ha-bindiface', 'ha-mcastport', 'vip']
+    settings = ['ha-bindiface', 'ha-mcastport', 'vip', 'os-internal-hostname',
+                'os-admin-hostname', 'os-public-hostname', 'os-access-hostname']
     conf = {}
     for setting in settings:
         if exclude_keys and setting in exclude_keys:
             continue
 
         conf[setting] = config_get(setting)
-    missing = []
-    [missing.append(s) for s, v in six.iteritems(conf) if v is None]
-    if missing:
-        log('Insufficient config data to configure hacluster.', level=ERROR)
-        raise HAIncompleteConfig
+
+    if not valid_hacluster_config():
+        raise HAIncorrectConfig('Insufficient or incorrect config data to '
+                                'configure hacluster.')
     return conf
+
+
+def valid_hacluster_config():
+    '''
+    Check that either vip or dns-ha is set. If dns-ha then one of os-*-hostname
+    must be set.
+
+    Note: ha-bindiface and ha-macastport both have defaults and will always
+    be set. We only care that either vip or dns-ha is set.
+
+    :returns: boolean: valid config returns true.
+    raises: HAIncompatibileConfig if settings conflict.
+    raises: HAIncompleteConfig if settings are missing.
+    '''
+    vip = config_get('vip')
+    dns = config_get('dns-ha')
+    if not(bool(vip) ^ bool(dns)):
+        msg = ('HA: Either vip or dns-ha must be set but not both in order to '
+               'use high availability')
+        status_set('blocked', msg)
+        raise HAIncorrectConfig(msg)
+
+    # If dns-ha then one of os-*-hostname must be set
+    if dns:
+        dns_settings = ['os-internal-hostname', 'os-admin-hostname',
+                        'os-public-hostname', 'os-access-hostname']
+        # At this point it is unknown if one or all of the possible
+        # network spaces are in HA. Validate at least one is set which is
+        # the minimum required.
+        for setting in dns_settings:
+            if config_get(setting):
+                log('DNS HA: At least one hostname is set {}: {}'
+                    ''.format(setting, config_get(setting)),
+                    level=DEBUG)
+                return True
+
+        msg = ('DNS HA: At least one os-*-hostname(s) must be set to use '
+               'DNS HA')
+        status_set('blocked', msg)
+        raise HAIncompleteConfig(msg)
+
+    log('VIP HA: VIP is set {}'.format(vip), level=DEBUG)
+    return True
 
 
 def canonical_url(configs, vip_setting='vip'):
