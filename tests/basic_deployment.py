@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # Copyright 2016 Canonical Ltd
 #
@@ -56,6 +56,9 @@ class NeutronAPIODLBasicDeployment(OpenStackAmuletDeployment):
         self._add_relations()
         self._configure_services()
         self._deploy()
+
+        # XXX: Need to wait for workload status before initializing tests.
+
         self._initialize_tests()
 
     def _add_services(self):

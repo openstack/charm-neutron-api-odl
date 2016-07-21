@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # Copyright 2016 Canonical Ltd
 #
@@ -14,10 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Amulet tests on a basic openvswitch ODL deployment on trusty-icehouse."""
+"""Amulet tests on a basic heat deployment on xenial-newton."""
 
-from basic_deployment import NeutronAPIODLBasicDeployment
+from basic_deployment import HeatBasicDeployment
 
 if __name__ == '__main__':
-    deployment = NeutronAPIODLBasicDeployment(series='trusty')
+    deployment = HeatBasicDeployment(series='xenial',
+                                     openstack='cloud:xenial-newton',
+                                     source='cloud:xenial-updates/newton')
     deployment.run_tests()
