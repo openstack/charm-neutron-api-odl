@@ -16,6 +16,10 @@ description: |
   SDN solution.
 tags:
   - openstack
+series:
+  - xenial
+  - trusty
+  - yakkety
 provides:
   neutron-plugin-api-subordinate:
     interface: neutron-plugin-api-subordinate
