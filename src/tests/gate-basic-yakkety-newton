@@ -14,12 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Amulet tests on a basic heat deployment on xenial-newton."""
+"""Amulet tests on a basic openvswitch ODL deployment on yakkety-newton."""
 
-from basic_deployment import HeatBasicDeployment
+from basic_deployment import NeutronAPIODLBasicDeployment
 
 if __name__ == '__main__':
-    deployment = HeatBasicDeployment(series='xenial',
-                                     openstack='cloud:xenial-newton',
-                                     source='cloud:xenial-updates/newton')
+    deployment = NeutronAPIODLBasicDeployment(series='yakkety',
+                                              odl_version='beryllium')
     deployment.run_tests()

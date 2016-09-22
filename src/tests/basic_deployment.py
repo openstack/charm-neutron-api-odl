@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # Copyright 2016 Canonical Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,6 +57,7 @@ class NeutronAPIODLBasicDeployment(OpenStackAmuletDeployment):
 
         # XXX: Need to wait for workload status before initializing tests.
 
+        self.d.sentry.wait()
         self._initialize_tests()
 
     def _add_services(self):
@@ -87,7 +86,7 @@ class NeutronAPIODLBasicDeployment(OpenStackAmuletDeployment):
             {
                 'name': 'neutron-api',
             },
-            {'name': 'mysql'},
+            {'name': 'percona-cluster', 'constraints': {'mem': '3072M'}},
             {'name': 'rabbitmq-server'},
             {'name': 'keystone'},
             {'name': 'nova-cloud-controller'},
@@ -104,8 +103,8 @@ class NeutronAPIODLBasicDeployment(OpenStackAmuletDeployment):
             'nova-compute:neutron-plugin': 'openvswitch-odl:neutron-plugin',
             'openvswitch-odl:ovsdb-manager': 'odl-controller:ovsdb-manager',
             'neutron-api-odl:odl-controller': 'odl-controller:controller-api',
-            'keystone:shared-db': 'mysql:shared-db',
-            'nova-cloud-controller:shared-db': 'mysql:shared-db',
+            'keystone:shared-db': 'percona-cluster:shared-db',
+            'nova-cloud-controller:shared-db': 'percona-cluster:shared-db',
             'nova-cloud-controller:amqp': 'rabbitmq-server:amqp',
             'nova-cloud-controller:image-service': 'glance:image-service',
             'nova-cloud-controller:identity-service':
@@ -114,10 +113,10 @@ class NeutronAPIODLBasicDeployment(OpenStackAmuletDeployment):
             'nova-cloud-controller:cloud-compute',
             'nova-compute:amqp': 'rabbitmq-server:amqp',
             'nova-compute:image-service': 'glance:image-service',
-            'glance:shared-db': 'mysql:shared-db',
+            'glance:shared-db': 'percona-cluster:shared-db',
             'glance:identity-service': 'keystone:identity-service',
             'glance:amqp': 'rabbitmq-server:amqp',
-            'neutron-api:shared-db': 'mysql:shared-db',
+            'neutron-api:shared-db': 'percona-cluster:shared-db',
             'neutron-api:amqp': 'rabbitmq-server:amqp',
             'neutron-api:neutron-api': 'nova-cloud-controller:neutron-api',
             'neutron-api:identity-service': 'keystone:identity-service',
@@ -142,8 +141,11 @@ class NeutronAPIODLBasicDeployment(OpenStackAmuletDeployment):
             'admin-password': 'openstack',
             'admin-token': 'ubuntutesting',
         }
-        mysql = {
-            'dataset-size': '50%',
+        pxc_config = {
+            'dataset-size': '25%',
+            'max-connections': 1000,
+            'root-password': 'ChangeMe123',
+            'sst-password': 'ChangeMe123',
         }
         odl_controller = {}
         if os.environ.get(ODL_PROFILES[self.odl_version]['location']):
@@ -170,7 +172,7 @@ class NeutronAPIODLBasicDeployment(OpenStackAmuletDeployment):
             'neutron-api': neutron_api,
             'nova-compute': nova_compute,
             'keystone': keystone,
-            'mysql': mysql,
+            'percona-cluster': pxc_config,
             'odl-controller': odl_controller,
             'neutron-api-odl': neutron_api_odl,
             'neutron-gateway': neutron_gateway,
@@ -184,7 +186,7 @@ class NeutronAPIODLBasicDeployment(OpenStackAmuletDeployment):
         self.compute_sentry = self.d.sentry['nova-compute'][0]
         self.neutron_api_sentry = self.d.sentry['neutron-api'][0]
         self.ovsodl_sentry = self.d.sentry['openvswitch-odl'][0]
-        self.mysql_sentry = self.d.sentry['mysql'][0]
+        self.pxc_sentry = self.d.sentry['percona-cluster'][0]
         self.rabbitmq_server_sentry = self.d.sentry['rabbitmq-server'][0]
         self.keystone_sentry = self.d.sentry['keystone'][0]
         self.glance_sentry = self.d.sentry['glance'][0]
@@ -192,6 +194,7 @@ class NeutronAPIODLBasicDeployment(OpenStackAmuletDeployment):
         self.neutron_api_odl_sentry = self.d.sentry['neutron-api-odl'][0]
         self.odl_controller_sentry = self.d.sentry['odl-controller'][0]
         self.gateway_sentry = self.d.sentry['neutron-gateway'][0]
+
         self.keystone = u.authenticate_keystone_admin(self.keystone_sentry,
                                                       user='admin',
                                                       password='openstack',
@@ -220,6 +223,10 @@ class NeutronAPIODLBasicDeployment(OpenStackAmuletDeployment):
                                   'nova-api-metadata'],
             self.odl_controller_sentry: ['odl-controller'],
         }
+
+        if self._get_openstack_release() >= self.xenial_newton:
+            commands[self.gateway_sentry].remove('neutron-lbaas-agent')
+            commands[self.gateway_sentry].append('neutron-lbaasv2-agent')
 
         ret = u.validate_services_by_name(commands)
         if ret:
@@ -254,7 +261,8 @@ class NeutronAPIODLBasicDeployment(OpenStackAmuletDeployment):
             # Beware of duplicate entries:
             #    https://bugs.opendaylight.org/show_bug.cgi?id=960
             br_controllers = list(set(br_controllers.split('\n')))
-            if len(br_controllers) != 1 or br_controllers[0] != controller_url:
+            if len(br_controllers) != 1 or \
+                    str(br_controllers[0]) != controller_url:
                 status, _ = self.gateway_sentry.run('ovs-vsctl show')
                 amulet.raise_status(
                     amulet.FAIL,
