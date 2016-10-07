@@ -27,7 +27,7 @@ charm.use_defaults(
     'update-status')
 
 
-@reactive.when('odl-controller.access.available')
+@reactive.when('odl-controller.available')
 def render_config(*args):
     with charm.provide_charm_instance() as neutron_api_odl_charm:
         neutron_api_odl_charm.render_with_interfaces(args)
@@ -38,6 +38,7 @@ def render_config(*args):
 def configure_plugin(api_principle):
     with charm.provide_charm_instance() as neutron_api_odl_charm:
         neutron_api_odl_charm.configure_plugin(api_principle)
+        neutron_api_odl_charm.assess_status()
 
 
 @reactive.when_file_changed(neutron_api_odl.ML2_CONF)

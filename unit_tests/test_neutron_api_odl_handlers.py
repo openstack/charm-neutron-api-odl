@@ -32,7 +32,7 @@ class TestRegisteredHooks(test_utils.TestRegisteredHooks):
         hook_set = {
             'when': {
                 'render_config': (
-                    'odl-controller.access.available',),
+                    'odl-controller.available',),
                 'configure_plugin': (
                     'neutron-plugin-api-subordinate.connected',),
                 'remote_restart': (
