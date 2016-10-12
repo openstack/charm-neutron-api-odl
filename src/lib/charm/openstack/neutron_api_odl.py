@@ -79,9 +79,19 @@ class NeutronAPIODLCharm(charms_openstack.charm.OpenStackCharm):
                 }
             }
         }
+        if self.release >= 'newton':
+            # NOTE: LBaaS v2 for >= newton
+            service_plugins = (
+                'router,firewall,vpnaas,metering,'
+                'neutron_lbaas.services.loadbalancer.'
+                'plugin.LoadBalancerPluginv2'
+            )
+        else:
+            service_plugins = 'router,firewall,lbaas,vpnaas,metering'
+
         api_principle.configure_plugin(
             neutron_plugin='odl',
             core_plugin='neutron.plugins.ml2.plugin.Ml2Plugin',
             neutron_plugin_config='/etc/neutron/plugins/ml2/ml2_conf.ini',
-            service_plugins='router,firewall,lbaas,vpnaas,metering',
+            service_plugins=service_plugins,
             subordinate_configuration=inject_config)

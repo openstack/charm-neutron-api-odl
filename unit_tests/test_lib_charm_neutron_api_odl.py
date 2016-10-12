@@ -66,3 +66,21 @@ class TestNeutronAPIODLCharm(Helper):
             neutron_plugin_config='/etc/neutron/plugins/ml2/ml2_conf.ini',
             service_plugins='router,firewall,lbaas,vpnaas,metering',
             subordinate_configuration=config_dict)
+
+    def test_configure_plugin_newton(self):
+        principle_interface = mock.MagicMock()
+        self.patch_object(neutron_api_odl.ch_utils, 'os_release')
+        self.os_release.return_value = 'newton'
+        c = neutron_api_odl.NeutronAPIODLCharm()
+        c.configure_plugin(principle_interface)
+        config_dict = {
+            'neutron-api': {
+                '/etc/neutron/neutron.conf': {'sections': {'DEFAULT': []}}}}
+        principle_interface.configure_plugin.assert_called_once_with(
+            neutron_plugin='odl',
+            core_plugin='neutron.plugins.ml2.plugin.Ml2Plugin',
+            neutron_plugin_config='/etc/neutron/plugins/ml2/ml2_conf.ini',
+            service_plugins=('router,firewall,vpnaas,metering,'
+                             'neutron_lbaas.services.loadbalancer.'
+                             'plugin.LoadBalancerPluginv2'),
+            subordinate_configuration=config_dict)
