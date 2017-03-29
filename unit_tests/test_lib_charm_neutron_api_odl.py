@@ -25,7 +25,7 @@ class Helper(test_utils.PatchHelper):
 
     def setUp(self):
         super().setUp()
-        self.patch_release(neutron_api_odl.NeutronAPIODLCharm.release)
+        self.patch_release(neutron_api_odl.IcehouseNeutronAPIODLCharm.release)
 
 
 class TestCustomProperties(Helper):
@@ -46,7 +46,7 @@ class TestNeutronAPIODLCharm(Helper):
     def test_all_packages(self):
         self.patch_object(neutron_api_odl.ch_utils, 'os_release')
         self.os_release.return_value = 'kilo'
-        c = neutron_api_odl.NeutronAPIODLCharm()
+        c = neutron_api_odl.KiloNeutronAPIODLCharm()
         self.assertEqual(
             c.all_packages,
             ['neutron-common', 'neutron-plugin-ml2', 'python-networking-odl'])
@@ -54,8 +54,8 @@ class TestNeutronAPIODLCharm(Helper):
     def test_configure_plugin(self):
         principle_interface = mock.MagicMock()
         self.patch_object(neutron_api_odl.ch_utils, 'os_release')
-        self.os_release.return_value = 'kilo'
-        c = neutron_api_odl.NeutronAPIODLCharm()
+        self.os_release.return_value = 'icehouse'
+        c = neutron_api_odl.IcehouseNeutronAPIODLCharm()
         c.configure_plugin(principle_interface)
         config_dict = {
             'neutron-api': {
@@ -71,7 +71,7 @@ class TestNeutronAPIODLCharm(Helper):
         principle_interface = mock.MagicMock()
         self.patch_object(neutron_api_odl.ch_utils, 'os_release')
         self.os_release.return_value = 'newton'
-        c = neutron_api_odl.NeutronAPIODLCharm()
+        c = neutron_api_odl.NewtonNeutronAPIODLCharm()
         c.configure_plugin(principle_interface)
         config_dict = {
             'neutron-api': {
